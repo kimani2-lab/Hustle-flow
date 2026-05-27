@@ -6,27 +6,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="container">
+    <h1 text-decoration-style:wavy>🧑‍💼 Fundi App – Youth Job Finder</h1>
 
-  <h1>🧑‍💼 Fundi App – Youth Job Finder</h1>
+    <!-- Job Form -->
+    <form id="jobForm">
+      <input type="text" id="title" placeholder="Job Title" required>
+      <input type="text" id="location" placeholder="Location" required>
+      <input type="number" id="pay" placeholder="Pay (KES)" required>
+      <input type="text" id="phone" placeholder="Phone Number" required>
+      <button type="submit">Post Job</button>
+    </form>
+    <p id="statusMessage" class="status-message"></p>
 
-  <!-- Job Form -->
-  <form id="jobForm">
-    <input type="text" id="title" placeholder="Job Title" required>
-    <input type="text" id="location" placeholder="Location" required>
-    <input type="number" id="pay" placeholder="Pay (KES)" required>
-    <input type="text" id="phone" placeholder="Phone Number" required>
-    <button type="submit">Post Job</button>
-  </form>
+    <!-- Search -->
+    <input type="text" id="search" placeholder="Search jobs...">
+    <p id="noResults" style="display:none;">No jobs found</p> 
 
-  <!-- Search -->
-  <input type="text" id="search" placeholder="Search jobs...">
-  <p id="noResults" style="text-align:center; display:none;">No jobs found</p>
-
-  <!-- Job List -->
-   <p id="noJobs">No jobs available</p>
-  <h2>Available Jobs</h2>
-  <div id="jobList"></div>
-  
+    <!-- Job List -->
+    <p id="noJobs">No jobs available</p>
+    <h2>Available Jobs</h2>
+    <div id="jobList"></div>
+  </div>
 
   <script src="index.js"></script>
 </body>
