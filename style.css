@@ -81,6 +81,7 @@ a { color: inherit; }
 .auth-copy > p:last-child { max-width: 390px; margin: 18px 0 0; color: var(--muted); line-height: 1.65; }
 
 .login-form { display: grid; gap: 10px; }
+.login-form #signupFields { display: grid; gap: 10px; }
 .login-form label, .field-group label { margin-top: 5px; color: var(--ink); font-size: 13px; font-weight: 700; }
 .login-form input, .field-group input, .field-group select, .field-group textarea, .search-field input, .select-field select {
   width: 100%;
@@ -96,6 +97,9 @@ a { color: inherit; }
 .login-form input::placeholder, .field-group input::placeholder, .field-group textarea::placeholder, .search-field input::placeholder { color: #9aa39b; }
 .login-form input:focus, .field-group input:focus, .field-group select:focus, .field-group textarea:focus, .search-field:focus-within, .select-field select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(36, 84, 62, .11); }
 .form-error { min-height: 18px; margin: 1px 0 0; color: #b14835; font-size: 13px; }
+.auth-switch { margin: 15px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
+.auth-switch button { padding: 3px; border: 0; color: var(--green); background: transparent; font-weight: 700; }
+.auth-switch button:hover { text-decoration: underline; }
 .auth-note { max-width: 430px; margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 
 .button {

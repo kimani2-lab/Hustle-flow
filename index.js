@@ -1,6 +1,13 @@
-const API_URL = "http://localhost:3000/jobs";
+const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "http://localhost:3000/jobs"
+  : null;
 const JOBS_KEY = "fundi.jobs.v1";
 const SESSION_KEY = "fundi.session.v1";
+const backendConfig = window.FUNDI_BACKEND_CONFIG || {};
+const backendConfigured = Boolean(backendConfig.supabaseUrl && backendConfig.supabaseAnonKey);
+const backendClient = window.supabase && backendConfigured
+  ? window.supabase.createClient(backendConfig.supabaseUrl, backendConfig.supabaseAnonKey)
+  : null;
 
 const seedJobs = [
   { id: "sample-painter", title: "House painter needed", category: "Skilled trades", location: "Kilimani, Nairobi", pay: "2500", phone: "0712 345 678", description: "Two-bedroom apartment. Bring your own brushes if possible." },
@@ -14,6 +21,11 @@ const authScreen = document.getElementById("authScreen");
 const appShell = document.getElementById("appShell");
 const loginForm = document.getElementById("loginForm");
 const loginError = document.getElementById("loginError");
+const authSwitchButton = document.getElementById("authSwitchButton");
+const authSubmit = document.getElementById("authSubmit");
+const signupFields = document.getElementById("signupFields");
+const fullNameInput = document.getElementById("fullName");
+const accountPhoneInput = document.getElementById("accountPhone");
 const jobForm = document.getElementById("jobForm");
 const jobList = document.getElementById("jobList");
 const activityList = document.getElementById("activityList");
@@ -33,6 +45,7 @@ const notificationEmpty = document.getElementById("notificationEmpty");
 let currentUser = null;
 let jobs = [];
 let apiAvailable = false;
+let authMode = "signin";
 
 function inferCategory(title) {
   const value = title.toLowerCase();
@@ -47,19 +60,36 @@ function normalizeJob(job) {
   return {
     ...job,
     id: String(job.id || `job-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    postedBy: job.postedBy || job.employer_id || "",
     title: String(job.title || "Untitled job"),
     category: job.category || inferCategory(job.title || ""),
     location: String(job.location || "Location not listed"),
-    pay: String(job.pay || "0"),
+    pay: String(job.pay ?? job.pay_amount ?? "0"),
     phone: String(job.phone || ""),
     description: String(job.description || ""),
     applications: Array.isArray(job.applications)
-      ? job.applications.filter((application) => application && application.email).map((application) => ({
+      ? job.applications.filter((application) => application && (application.email || application.applicant_email)).map((application) => ({
         ...application,
-        email: String(application.email)
+        id: application.id || application.applicant_id || "",
+        email: String(application.email || application.applicant_email),
+        name: application.name || application.applicant_name || application.email || application.applicant_email,
+        phone: application.phone || application.applicant_phone || "",
+        appliedAt: application.appliedAt || application.created_at || ""
       }))
       : []
   };
+}
+
+function userKey() {
+  return currentUser.id || currentUser.email;
+}
+
+function isOwnedByCurrentUser(job) {
+  return job.postedBy === userKey() || (!currentUser.id && job.postedBy === currentUser.email);
+}
+
+function hasCurrentUserApplied(job) {
+  return job.applications.some((application) => application.id === currentUser.id || application.email === currentUser.email);
 }
 
 function readStoredJobs() {
@@ -80,6 +110,21 @@ function saveJobs() {
 }
 
 async function loadJobs() {
+  if (backendClient && currentUser.id) {
+    await loadSharedJobs();
+    return;
+  }
+
+  if (!API_URL) {
+    const cachedJobs = readStoredJobs();
+    jobs = cachedJobs.length ? cachedJobs : seedJobs.map(normalizeJob);
+    apiAvailable = false;
+    storageStatus.textContent = cachedJobs.length ? "Saved on this device" : "Offline demo jobs";
+    saveJobs();
+    renderAll();
+    return;
+  }
+
   try {
     const response = await fetch(API_URL);
     if (!response.ok) throw new Error("Job service is unavailable");
@@ -98,6 +143,35 @@ async function loadJobs() {
   renderAll();
 }
 
+async function loadSharedJobs() {
+  try {
+    const [{ data: jobRows, error: jobsError }, { data: applicationRows, error: applicationsError }] = await Promise.all([
+      backendClient.from("jobs").select("*").order("created_at", { ascending: false }),
+      backendClient.from("applications").select("*").order("created_at", { ascending: false })
+    ]);
+    if (jobsError) throw jobsError;
+    if (applicationsError) throw applicationsError;
+
+    const applicationsByJob = new Map();
+    for (const application of applicationRows || []) {
+      const current = applicationsByJob.get(application.job_id) || [];
+      current.push(application);
+      applicationsByJob.set(application.job_id, current);
+    }
+    jobs = (jobRows || []).map((job) => normalizeJob({
+      ...job,
+      applications: applicationsByJob.get(job.id) || []
+    }));
+    apiAvailable = true;
+    storageStatus.textContent = "Shared Fundi database";
+    renderAll();
+  } catch (error) {
+    console.error("Unable to load shared Fundi data:", error);
+    storageStatus.textContent = "Shared database unavailable";
+    showDashboardMessage("Could not reach Fundi's shared database. Please try again.");
+  }
+}
+
 function getUserFromSession() {
   try {
     return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
@@ -114,19 +188,42 @@ function showDashboard() {
   loadJobs();
 }
 
+function setAuthMode(mode) {
+  authMode = mode;
+  const isSignUp = mode === "signup";
+  signupFields.hidden = !isSignUp;
+  fullNameInput.required = isSignUp;
+  accountPhoneInput.required = isSignUp;
+  document.getElementById("authEyebrow").textContent = isSignUp ? "JOIN LOCAL WORK" : "LOCAL WORK, REAL OPPORTUNITY";
+  document.getElementById("authTitle").textContent = isSignUp ? "Create your Fundi account." : "Your next good job starts here.";
+  document.getElementById("authDescription").textContent = isSignUp
+    ? "Create an account to find nearby work or post opportunities for your community."
+    : "Sign in to find nearby work or connect with people who need your skills.";
+  document.getElementById("authSwitchText").textContent = isSignUp ? "Already on Fundi?" : "New to Fundi?";
+  authSwitchButton.textContent = isSignUp ? "Sign in" : "Create an account";
+  authSubmit.firstChild.textContent = isSignUp ? "Create account " : "Continue to Fundi ";
+}
+
 function showLogin() {
   currentUser = null;
-  sessionStorage.removeItem(SESSION_KEY);
+  if (!backendClient) sessionStorage.removeItem(SESSION_KEY);
   appShell.hidden = true;
   authScreen.hidden = false;
   notificationPanel.hidden = true;
   notificationButton.setAttribute("aria-expanded", "false");
   dashboardMessage.textContent = "";
   postMessage.textContent = "";
+  loginError.textContent = "";
+  setAuthMode("signin");
   loginForm.reset();
 }
 
-loginForm.addEventListener("submit", (event) => {
+authSwitchButton.addEventListener("click", () => {
+  setAuthMode(authMode === "signin" ? "signup" : "signin");
+  loginError.textContent = "";
+});
+
+loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.getElementById("email").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
@@ -135,12 +232,53 @@ loginForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const name = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-  currentUser = { email, name: name || "Fundi member" };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+  authSubmit.disabled = true;
   loginError.textContent = "";
-  showDashboard();
+  try {
+    if (backendClient) {
+      const fullName = fullNameInput.value.trim();
+      const phone = accountPhoneInput.value.trim();
+      const result = authMode === "signup"
+        ? await backendClient.auth.signUp({ email, password, options: { data: { full_name: fullName, phone } } })
+        : await backendClient.auth.signInWithPassword({ email, password });
+      if (result.error) throw result.error;
+      if (authMode === "signup" && !result.data.session) {
+        loginError.textContent = "Account created. Check your email to confirm it, then sign in.";
+        setAuthMode("signin");
+        return;
+      }
+      if (result.data.user) setCurrentUser(result.data.user);
+    } else {
+      currentUser = { email, name: displayName(email) };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+      showDashboard();
+    }
+  } catch (error) {
+    loginError.textContent = error.message || "Unable to sign in. Please try again.";
+  } finally {
+    authSubmit.disabled = false;
+  }
 });
+
+function displayName(email) {
+  return email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Fundi member";
+}
+
+function setCurrentUser(user) {
+  if (!user) {
+    currentUser = null;
+    showLogin();
+    return;
+  }
+  if (currentUser?.id === user.id && !appShell.hidden) return;
+  currentUser = {
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata?.full_name || displayName(user.email || ""),
+    phone: user.user_metadata?.phone || ""
+  };
+  showDashboard();
+}
 
 function setView(viewName) {
   const views = { find: "findView", post: "postView", activity: "activityView" };
@@ -163,7 +301,14 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 document.querySelectorAll("[data-go-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.goView));
 });
-document.getElementById("logoutButton").addEventListener("click", showLogin);
+document.getElementById("logoutButton").addEventListener("click", async () => {
+  if (backendClient) {
+    const { error } = await backendClient.auth.signOut();
+    if (error) showDashboardMessage("Unable to sign out. Please try again.");
+    return;
+  }
+  showLogin();
+});
 searchInput.addEventListener("input", renderJobs);
 categoryFilter.addEventListener("change", renderJobs);
 
@@ -178,8 +323,8 @@ function createJobCard(job, activity = false) {
   const card = makeElement("article", "job-card");
   const top = makeElement("div", "job-card-top");
   const applications = job.applications || [];
-  const isOwner = job.postedBy === currentUser.email;
-  const hasApplied = applications.some((application) => application.email === currentUser.email);
+  const isOwner = isOwnedByCurrentUser(job);
+  const hasApplied = hasCurrentUserApplied(job);
   top.append(makeElement("span", "category-tag", job.category));
   const state = activity
     ? (isOwner ? `${applications.length} interested` : "Your interest sent")
@@ -235,7 +380,7 @@ function renderJobs() {
 }
 
 function renderActivity() {
-  const activityJobs = jobs.filter((job) => job.postedBy === currentUser.email || job.applications.some((application) => application.email === currentUser.email));
+  const activityJobs = jobs.filter((job) => isOwnedByCurrentUser(job) || hasCurrentUserApplied(job));
   activityList.replaceChildren(...activityJobs.map((job) => createJobCard(job, true)));
   activityEmpty.hidden = activityJobs.length > 0;
 }
@@ -243,7 +388,7 @@ function renderActivity() {
 function renderAll() {
   document.getElementById("availableCount").textContent = jobs.length;
   document.getElementById("interestedCount").textContent = jobs.reduce((count, job) => count + job.applications.length, 0);
-  document.getElementById("postedCount").textContent = jobs.filter((job) => job.postedBy === currentUser.email).length;
+  document.getElementById("postedCount").textContent = jobs.filter(isOwnedByCurrentUser).length;
   renderJobs();
   renderActivity();
   renderNotifications();
@@ -257,8 +402,8 @@ function showDashboardMessage(message) {
 }
 
 function employerNotifications() {
-  return jobs.flatMap((job) => (job.postedBy === currentUser.email ? job.applications : [])
-    .filter((application) => application.email !== currentUser.email)
+  return jobs.flatMap((job) => (isOwnedByCurrentUser(job) ? job.applications : [])
+    .filter((application) => application.id !== currentUser.id && application.email !== currentUser.email)
     .map((application) => ({
       ...application,
       jobId: job.id,
@@ -292,6 +437,7 @@ function renderNotifications() {
     item.dataset.jobId = notification.jobId;
     const applicantName = notification.name || notification.email.split("@")[0];
     item.append(makeElement("span", "notification-message", `${applicantName} is interested in ${notification.jobTitle}`));
+    if (notification.phone) item.append(makeElement("span", "notification-time", notification.phone));
     const timestamp = Date.parse(notification.appliedAt || "");
     const formattedTime = Number.isNaN(timestamp) ? "Recently" : new Date(timestamp).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" });
     item.append(makeElement("span", "notification-time", formattedTime));
@@ -339,7 +485,14 @@ window.addEventListener("storage", (event) => {
 });
 
 window.setInterval(async () => {
-  if (!apiAvailable || !currentUser || document.hidden) return;
+  if (!currentUser || document.hidden) return;
+  if (backendClient && currentUser.id) {
+    const previousCount = employerNotifications().length;
+    await loadSharedJobs();
+    if (employerNotifications().length > previousCount) showDashboardMessage("Someone is interested in one of your jobs.");
+    return;
+  }
+  if (!apiAvailable) return;
   try {
     const response = await fetch(API_URL);
     if (!response.ok) return;
@@ -361,18 +514,32 @@ jobList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action='apply']");
   if (!button) return;
   const job = jobs.find((item) => item.id === button.dataset.id);
-  if (!job || job.postedBy === currentUser.email || job.applications.some((application) => application.email === currentUser.email)) return;
+  if (!job || isOwnedByCurrentUser(job) || hasCurrentUserApplied(job)) return;
 
   button.disabled = true;
   let targetJob = job;
   try {
-    if (apiAvailable) {
+    if (backendClient) {
+      const { data, error } = await backendClient.from("applications").insert({
+        job_id: job.id,
+        applicant_id: currentUser.id,
+        applicant_name: currentUser.name,
+        applicant_email: currentUser.email,
+        applicant_phone: currentUser.phone
+      }).select().single();
+      if (error) throw error;
+      job.applications.push(normalizeJob({ applications: [data] }).applications[0]);
+      saveJobs();
+      renderAll();
+      showDashboardMessage("Your interest was sent to the employer.");
+      return;
+    } else if (apiAvailable) {
       const currentResponse = await fetch(`${API_URL}/${encodeURIComponent(job.id)}`);
       if (!currentResponse.ok) throw new Error("Job could not be refreshed");
       targetJob = normalizeJob(await currentResponse.json());
     }
 
-    if (targetJob.applications.some((application) => application.email === currentUser.email)) {
+    if (!backendClient && hasCurrentUserApplied(targetJob)) {
       Object.assign(job, targetJob);
       renderAll();
       return;
@@ -380,7 +547,7 @@ jobList.addEventListener("click", async (event) => {
 
     const applicant = { email: currentUser.email, name: currentUser.name, appliedAt: new Date().toISOString() };
     const updatedJob = { ...targetJob, applications: [...targetJob.applications, applicant] };
-    if (apiAvailable) {
+    if (!backendClient && apiAvailable) {
       const response = await fetch(`${API_URL}/${encodeURIComponent(job.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -394,7 +561,13 @@ jobList.addEventListener("click", async (event) => {
     saveJobs();
     renderAll();
     showDashboardMessage("Your interest was sent to the employer.");
-  } catch {
+  } catch (error) {
+    if (backendClient) {
+      console.error("Unable to send job interest:", error);
+      await loadSharedJobs();
+      showDashboardMessage(error.message || "Could not send your interest. Please try again.");
+      return;
+    }
     apiAvailable = false;
     const storedJob = readStoredJobs().find((item) => item.id === job.id) || job;
     if (!storedJob.applications.some((application) => application.email === currentUser.email)) {
@@ -419,14 +592,26 @@ jobForm.addEventListener("submit", async (event) => {
     pay: formData.get("pay"),
     phone: formData.get("phone").trim(),
     description: formData.get("description").trim(),
-    postedBy: currentUser.email,
+    postedBy: currentUser.id || currentUser.email,
   });
 
   const submitButton = jobForm.querySelector("button[type='submit']");
   submitButton.disabled = true;
   postMessage.textContent = "";
   try {
-    if (apiAvailable) {
+    if (backendClient) {
+      const { data, error } = await backendClient.from("jobs").insert({
+        employer_id: currentUser.id,
+        title: newJob.title,
+        category: newJob.category,
+        location: newJob.location,
+        pay_amount: Number(newJob.pay),
+        phone: newJob.phone,
+        description: newJob.description
+      }).select().single();
+      if (error) throw error;
+      jobs.unshift(normalizeJob({ ...data, applications: [] }));
+    } else if (apiAvailable) {
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -442,7 +627,12 @@ jobForm.addEventListener("submit", async (event) => {
     renderAll();
     setView("find");
     showDashboardMessage("Your job is live.");
-  } catch {
+  } catch (error) {
+    if (backendClient) {
+      console.error("Unable to post job:", error);
+      postMessage.textContent = error.message || "Could not publish the job. Please try again.";
+      return;
+    }
     apiAvailable = false;
     jobs.unshift(newJob);
     storageStatus.textContent = "Saved on this device";
@@ -456,9 +646,25 @@ jobForm.addEventListener("submit", async (event) => {
   }
 });
 
-currentUser = getUserFromSession();
-if (currentUser && currentUser.email) {
-  showDashboard();
+if (backendConfigured && !backendClient) {
+  document.getElementById("authNote").textContent = "Fundi's authentication service could not load. Refresh the page or contact support.";
+  loginError.textContent = "Authentication service unavailable. Please try again later.";
+  document.querySelector(".auth-switch").hidden = true;
+  authSwitchButton.disabled = true;
+  authSubmit.disabled = true;
+} else if (backendClient) {
+  document.querySelector(".auth-switch").hidden = false;
+  document.getElementById("authNote").textContent = "Use your email and password to access jobs and applications shared across Fundi.";
+  backendClient.auth.onAuthStateChange((event, session) => {
+    window.setTimeout(() => {
+      if (event === "SIGNED_OUT") setCurrentUser(null);
+      else if (session?.user) setCurrentUser(session.user);
+    }, 0);
+  });
 } else {
-  currentUser = null;
+  document.querySelector(".auth-switch").hidden = true;
+  setAuthMode("signin");
+  currentUser = getUserFromSession();
+  if (currentUser && currentUser.email) showDashboard();
+  else currentUser = null;
 }

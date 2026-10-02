@@ -6,9 +6,22 @@ Fundi connects local workers with nearby job opportunities. The app includes a d
 
 Run `npm run dev` and open [http://localhost:4173](http://localhost:4173). The static server uses Node.js built-ins and requires no package installation.
 
-Use any valid email address and a password of at least 6 characters to enter the demo. The demo does not authenticate against a server; the session and offline job changes stay in the current browser.
+Without backend credentials, use any valid email address and a password of at least 6 characters to enter local demo mode. Demo sign-ins and job changes are only stored in that browser and are not real accounts or shared with other users.
 
-By default, Fundi seeds a small set of example jobs and saves job changes in browser storage. A job stays listed as workers express interest, and its poster sees each applicant in Notifications. To use the existing JSON database instead, run `json-server --watch db.json` in a second terminal. When the API at `http://localhost:3000/jobs` is available, Fundi reads and writes jobs there.
+### Connect shared accounts and jobs
+
+The frontend supports Supabase so it can stay on a static Netlify or Vercel deployment while accounts, jobs, applications, and employer notifications use shared storage.
+
+1. Create a Supabase project and run `supabase/schema.sql` in its SQL Editor.
+2. Set the project's allowed authentication redirect URLs to include the deployed Fundi URL.
+3. Copy the project URL and public anon key from Supabase project settings into `backend-config.js` as `supabaseUrl` and `supabaseAnonKey`.
+4. Redeploy the frontend. New users register with their name, email, mobile phone, and password; Supabase may require email confirmation before sign-in.
+
+Do not deploy real user accounts until the schema is applied and valid project credentials are configured. An empty config deliberately keeps the app in local demo mode.
+
+Only use the public anon key in this file. Never put a Supabase service-role key in frontend code. Row-level security in the schema limits job management to job owners and applicant details to the applicant and that job's owner.
+
+If Supabase is not configured, Fundi seeds example jobs and uses browser storage for demo data. The optional legacy local API can also be run with `json-server --watch db.json` at `http://localhost:3000/jobs`.
 
 ### Notes
 
