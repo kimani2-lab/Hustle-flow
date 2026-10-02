@@ -2,31 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Fundi App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6f2">
+  <title>Fundi | Find good work</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1 text-decoration-style:wavy>🧑‍💼 Fundi App – Youth Job Finder</h1>
+  <main id="authScreen" class="auth-screen">
+    <section class="auth-panel" aria-labelledby="authTitle">
+      <a class="brand" href="#" aria-label="Fundi home">
+        <span class="brand-mark">F</span>
+        <span>fundi<span class="brand-period">.</span></span>
+      </a>
+      <div class="auth-copy">
+        <p class="eyebrow">LOCAL WORK, REAL OPPORTUNITY</p>
+        <h1 id="authTitle">Your next good job starts here.</h1>
+        <p>Sign in to find nearby work or connect with people who need your skills.</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="At least 6 characters" autocomplete="current-password" minlength="6" required>
+        <p id="loginError" class="form-error" role="alert"></p>
+        <button class="button button-primary login-submit" type="submit">Continue to Fundi <span aria-hidden="true">&#8594;</span></button>
+      </form>
+      <p class="auth-note">Demo access: use any valid email and a password of 6 or more characters. Your sign-in stays on this device.</p>
+    </section>
+    <aside class="auth-image" aria-label="A worker on a building site">
+      <div class="image-caption">
+        <span class="caption-dot"></span>
+        <span>Made for the people who make things happen.</span>
+      </div>
+    </aside>
+  </main>
 
-    <!-- Job Form -->
-    <form id="jobForm">
-      <input type="text" id="title" placeholder="Job Title" required>
-      <input type="text" id="location" placeholder="Location" required>
-      <input type="number" id="pay" placeholder="Pay (KES)" required>
-      <input type="text" id="phone" placeholder="Phone Number" required>
-      <button type="submit">Post Job</button>
-    </form>
-    <p id="statusMessage" class="status-message"></p>
+  <div id="appShell" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand sidebar-brand" href="#" aria-label="Fundi home">
+        <span class="brand-mark">F</span>
+        <span>fundi<span class="brand-period">.</span></span>
+      </a>
+      <p class="nav-label">WORKSPACE</p>
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-item is-active" type="button" data-view="find"><span class="nav-icon" aria-hidden="true">&#9906;</span>Find work</button>
+        <button class="nav-item" type="button" data-view="post"><span class="nav-icon" aria-hidden="true">&#43;</span>Post a job</button>
+        <button class="nav-item" type="button" data-view="activity"><span class="nav-icon" aria-hidden="true">&#9776;</span>My activity</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-tip"><span class="tip-spark" aria-hidden="true">&#10022;</span><p>Good work travels by word of mouth. Share Fundi with your crew.</p></div>
+        <button id="logoutButton" class="logout-button" type="button"><span aria-hidden="true">&#8592;</span> Sign out</button>
+      </div>
+    </aside>
 
-    <!-- Search -->
-    <input type="text" id="search" placeholder="Search jobs...">
-    <p id="noResults" style="display:none;">No jobs found</p> 
+    <main class="dashboard-main">
+      <header class="topbar">
+        <div class="breadcrumb">Fundi <span>/</span> <strong id="breadcrumbCurrent">Find work</strong></div>
+        <div class="topbar-actions">
+          <button id="notificationButton" class="notification-button" type="button" aria-expanded="false" aria-controls="notificationPanel">Notifications <span id="notificationBadge" class="notification-badge" hidden>0</span></button>
+          <section id="notificationPanel" class="notification-panel" aria-labelledby="notificationHeading" hidden>
+            <div class="notification-header"><h2 id="notificationHeading">Notifications</h2><span id="notificationCount" class="notification-count"></span></div>
+            <div id="notificationList" class="notification-list"></div>
+            <p id="notificationEmpty" class="notification-empty">No one has shown interest in your jobs yet.</p>
+          </section>
+          <div class="profile-chip"><span id="userAvatar" class="avatar">F</span><span id="userEmail" class="profile-email"></span></div>
+        </div>
+      </header>
 
-    <!-- Job List -->
-    <p id="noJobs">No jobs available</p>
-    <h2>Available Jobs</h2>
-    <div id="jobList"></div>
+      <section class="dashboard-content">
+        <section id="findView" class="view-panel">
+          <div class="welcome-row">
+            <div>
+              <p class="eyebrow">MONDAY, YOUR NEXT MOVE</p>
+              <h1>Find work that<br><span>works for you.</span></h1>
+              <p class="view-intro">Local jobs, posted by people who need your skills.</p>
+            </div>
+            <button class="button button-dark" type="button" data-go-view="post"><span aria-hidden="true">&#43;</span> Post a job</button>
+          </div>
+
+          <div class="stats-row" aria-label="Job statistics">
+            <div class="stat-item"><span class="stat-number" id="availableCount">0</span><span class="stat-label">Open jobs</span></div>
+            <span class="stat-divider"></span>
+            <div class="stat-item"><span class="stat-number" id="interestedCount">0</span><span class="stat-label">People interested</span></div>
+            <span class="stat-divider"></span>
+            <div class="stat-item"><span class="stat-number" id="postedCount">0</span><span class="stat-label">Your posts</span></div>
+          </div>
+
+          <div class="section-heading">
+            <div><p class="eyebrow">THE LATEST</p><h2>Open opportunities</h2></div>
+            <span id="resultsLabel" class="results-label"></span>
+          </div>
+          <div class="search-tools">
+            <label class="search-field" for="searchInput"><span aria-hidden="true">&#9906;</span><input id="searchInput" type="search" placeholder="Search by job or location" autocomplete="off"></label>
+            <label class="select-field" for="categoryFilter"><span class="sr-only">Filter by category</span><select id="categoryFilter"><option value="all">All categories</option><option>Skilled trades</option><option>Cleaning</option><option>Driving</option><option>Hospitality</option><option>Other</option></select></label>
+          </div>
+          <p id="dashboardMessage" class="status-message" role="status" aria-live="polite"></p>
+          <div id="jobList" class="job-list"></div>
+          <div id="emptyState" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">&#9906;</span><h3 id="emptyTitle">No jobs found</h3><p id="emptyCopy">Try a different search or check back soon.</p></div>
+        </section>
+
+        <section id="postView" class="view-panel" hidden>
+          <div class="page-heading"><p class="eyebrow">HELP SOMEONE GET TO WORK</p><h1>Post a job.</h1><p class="view-intro">Share the details and connect with someone ready to get started.</p></div>
+          <form id="jobForm" class="job-form">
+            <div class="form-grid">
+              <div class="field-group field-wide"><label for="title">Job title</label><input id="title" name="title" type="text" placeholder="e.g. House painter" maxlength="80" required></div>
+              <div class="field-group"><label for="category">Category</label><select id="category" name="category" required><option value="">Choose a category</option><option>Skilled trades</option><option>Cleaning</option><option>Driving</option><option>Hospitality</option><option>Other</option></select></div>
+              <div class="field-group"><label for="location">Location</label><input id="location" name="location" type="text" placeholder="e.g. Westlands, Nairobi" maxlength="80" required></div>
+              <div class="field-group"><label for="pay">Pay <span>(KES)</span></label><input id="pay" name="pay" type="number" min="1" step="1" placeholder="e.g. 1500" required></div>
+              <div class="field-group"><label for="phone">Contact phone</label><input id="phone" name="phone" type="tel" placeholder="e.g. 0712 345 678" autocomplete="tel" required></div>
+              <div class="field-group field-wide"><label for="description">What does the work involve? <span>(optional)</span></label><textarea id="description" name="description" rows="4" maxlength="500" placeholder="Add a few details about the work, timing, or experience needed."></textarea></div>
+            </div>
+            <div class="form-actions"><p id="postMessage" class="status-message" role="status" aria-live="polite"></p><button class="button button-primary" type="submit">Publish job <span aria-hidden="true">&#8594;</span></button></div>
+          </form>
+        </section>
+
+        <section id="activityView" class="view-panel" hidden>
+          <div class="page-heading"><p class="eyebrow">YOUR CORNER OF FUNDI</p><h1>My activity.</h1><p class="view-intro">Jobs you have posted and jobs you are interested in.</p></div>
+          <div id="activityList" class="job-list"></div>
+          <div id="activityEmpty" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">&#9776;</span><h3>Nothing here yet</h3><p>When you post a job or show interest, it will show up here.</p><button class="button button-dark" type="button" data-go-view="find">Explore open jobs</button></div>
+        </section>
+      </section>
+      <footer class="dashboard-footer"><span>Fundi connects local skills with local work.</span><span id="storageStatus">Saved on this device</span></footer>
+    </main>
   </div>
 
   <script src="index.js"></script>

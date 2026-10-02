@@ -1,31 +1,17 @@
-Fundi App – Youth Job Finder
+## Fundi
 
-Project Description
-This is a Single Page Application (SPA) that allows employers to post job opportunities and youth to search and view available jobs. The application uses JavaScript to dynamically update content without reloading the page and integrates with a local API using json-server.
+Fundi connects local workers with nearby job opportunities. The app includes a demo sign-in, job search and category filters, job posting, multi-person expressions of interest, employer notifications, and a personal activity view.
 
-Features
+### Run locally
 
-Post job listings
-View available jobs
-Search jobs by title or location
-Data persists using a local API
-Dynamic updates without page reload
+Run `npm run dev` and open [http://localhost:4173](http://localhost:4173). The static server uses Node.js built-ins and requires no package installation.
 
-Technologies Used
+Use any valid email address and a password of at least 6 characters to enter the demo. The demo does not authenticate against a server; the session and offline job changes stay in the current browser.
 
-HTML
-CSS
-JavaScript
-Fetch API
-JSON Server
+By default, Fundi seeds a small set of example jobs and saves job changes in browser storage. A job stays listed as workers express interest, and its poster sees each applicant in Notifications. To use the existing JSON database instead, run `json-server --watch db.json` in a second terminal. When the API at `http://localhost:3000/jobs` is available, Fundi reads and writes jobs there.
 
-How to Run the Project
+### Notes
 
-Clone the repository
-Open the project folder
-Run json-server using:
-json-server --watch db.json
-Open index.html in your browser
+This is a front-end prototype, not production authentication. Do not use real passwords or sensitive data. For a production release, connect sign-in and job ownership to a secured backend.
 
-Author
-Allan Kimani
+Author: Allan Kimani

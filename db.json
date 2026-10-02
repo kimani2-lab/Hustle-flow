@@ -154,6 +154,30 @@
       "phone": "+254758288727",
       "booked": false,
       "id": "Z9ILSfB"
+    },
+    {
+      "title": "Conductor",
+      "location": "Thika",
+      "pay": "400",
+      "phone": "0758288727",
+      "booked": false,
+      "id": "dKs3oYI"
+    },
+    {
+      "title": "Conductor",
+      "location": "Thika",
+      "pay": "400",
+      "phone": "0758288727",
+      "booked": false,
+      "id": "WnrhKUl"
+    },
+    {
+      "title": "Fundi",
+      "location": "Rongai",
+      "pay": "1200",
+      "phone": "0758288727",
+      "booked": false,
+      "id": "0SV0XRo"
     }
   ]
 }
